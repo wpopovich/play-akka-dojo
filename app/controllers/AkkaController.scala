@@ -4,9 +4,9 @@ import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.actor.typed.{ActorRef, ActorSystem, Props, Scheduler, SpawnProtocol}
 import akka.pattern.StatusReply
 import akka.util.Timeout
-import models.{CreateStudent, EnrollStudent, GetStudent, Student, StudentCommand, StudentState}
+import models.{CreateStudent, CreatedStudent, EnrollStudent, GetCourses, GetStudent, Student, StudentCommand, StudentState}
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.json.{JsPath, Json, Reads}
+import play.api.libs.json.{JsPath, Json, Reads, Writes}
 import play.api.mvc
 import play.api.mvc.{Action, AnyContent, BaseController, ControllerComponents}
 
@@ -28,6 +28,7 @@ class AkkaController @Inject()(val controllerComponents: ControllerComponents,
 
   case class CreateStudentRequest(name: String)
   implicit val r = Json.reads[CreateStudentRequest]
+
   def createStudent(): mvc.Action[CreateStudentRequest] = Action.async(parse.json[CreateStudentRequest]) { request =>
     val parsed = request.body
     val studentId = UUID.randomUUID().toString
@@ -43,10 +44,29 @@ class AkkaController @Inject()(val controllerComponents: ControllerComponents,
     val parsed : EnrollStudentRequest = request.body
 
     val actorRef = getStudentActor(id)
+//    actorRef.ask(replyTo => GetCourses(parsed.courses, replyTo))
+//      .map(_ => NoContent)
     actorRef.ask(replyTo => EnrollStudent(parsed.courses, replyTo))
       .map(_ => NoContent)
+    
+//    def toResponse(x: Set[String]) = Future.successful(Ok(Json.toJson(x))) 
+//    
+//    val r = toResponse(Set("123", "456"))
+//    r.map(_.header.status shouldBe 200)
+    /*
+    Student.find(studentId).courses
+     */
+    
+    /*
+    new StudentService(studentId)
+      .getStudent().courses
+
+      service = new commandHandler();
+      cursos = service.execute(GetCourses(studentId));
+     */
   }
 
+  implicit val s = Json.writes[CreatedStudent]
   def getStudent(id: String): Action[AnyContent] = Action.async {
     /*
     $student = Student::find(id)
@@ -56,34 +76,11 @@ class AkkaController @Inject()(val controllerComponents: ControllerComponents,
     $student.enrollCourse($curso)
      */
     val actOf = getStudentActor(id)
-    actOf.ask[StatusReply[String]](GetStudent)
-      .map(student => Ok(student.getValue))
+    actOf.ask(GetStudent)
+      .map(student => Ok(Json.toJson(student.getValue)))
       .recover {
         case StatusReply.ErrorMessage(error) => NotFound(s"Stuent $id not found, ${error}")
       }
-
-//      .onComplete {
-//        case Failure(ex) =>
-//          println(s"ex $ex")
-//          NotFound
-//        case Success(value) =>
-//          println("Hello")
-//          Ok(value)
-//      }
-
-//      .map(reply =>
-
-//      reply match {
-//        case a: Stat
-//      }
-//      if (reply.isSuccess)
-//        Ok(reply.getValue)
-//      else
-//        NotFound(reply.getValue)
-//      reply match {
-//      case StatusReply.Success(name) => Ok(name)
-//      case StatusReply.Error(error) => NotFound(error)
-//    }
   }
 
   def getStudentActor(id: String): ActorRef[StudentCommand] = {

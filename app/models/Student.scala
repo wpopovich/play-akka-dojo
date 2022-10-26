@@ -9,7 +9,7 @@ import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 
 case class Student() {
-  
+
 }
 
 sealed trait StudentState {
@@ -25,7 +25,6 @@ case class EmptyStudent(id: String) extends StudentState {
           .thenReply(replyTo)(_ => id)
       case GetStudent(replyTo) =>
         Effect.reply(replyTo)(StatusReply.Error("Id no existe capooo"))
-
     }
   }
 
@@ -37,10 +36,13 @@ case class CreatedStudent(id: String, name: String, courses: Set[String] = Set.e
   override def commandHandler(command: StudentCommand): Effect[StudentEvent, StudentState] = {
     command match {
       case GetStudent(replyTo) =>
-        Effect.reply(replyTo)(StatusReply.Success(name))
+        Effect.reply(replyTo)(StatusReply.Success(this))
       case EnrollStudent(courses, replyTo) =>
         Effect.persist(StudentEnrolled(courses))
           .thenReply(replyTo)(_ => StatusReply.Ack)
+      case CreateStudent(_, replyTo) =>
+        Effect.reply(replyTo)("Este estudiante ya existe")
+
     }
   }
 
@@ -52,9 +54,11 @@ case class CreatedStudent(id: String, name: String, courses: Set[String] = Set.e
 }
 
 sealed trait StudentCommand
-case class CreateStudent(name:String, replyTo: ActorRef[String]) extends StudentCommand
-case class GetStudent(whatever: ActorRef[StatusReply[String]]) extends StudentCommand
+case class CreateStudent(name: String, replyTo: ActorRef[String]) extends StudentCommand
+case class GetStudent(whatever: ActorRef[StatusReply[CreatedStudent]]) extends StudentCommand
 case class EnrollStudent(courses: Set[String], replyTo: ActorRef[StatusReply[Done]]) extends StudentCommand
+case class ActivateStudent(activate: Boolean) extends StudentCommand
+case class GetCourses(courses: Set[String]) extends StudentCommand
 
 sealed trait StudentEvent
 case class StudentCreated(name: String) extends StudentEvent
