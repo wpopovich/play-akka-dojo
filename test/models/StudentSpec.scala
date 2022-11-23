@@ -51,6 +51,7 @@ class StudentSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
       val probe = testKit.createTestProbe[StatusReply[CreatedStudent]]
       studentActor ! GetStudent(probe.ref)
       val student = probe.expectMessageType[StatusReply[CreatedStudent]].getValue
+      println(student)
 
 //      student.courses should contain allElementsOf(Set("akka", "Scala"))
       student.courses shouldBe Set("akka", "Scala")
@@ -65,16 +66,22 @@ class StudentSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
       val studentActor = testKit.spawn(Student(studentId))
 
       //EmptyStudent -> CreatedStudent(JuanPerez, sinCursos)
+      val probe2 = testKit.createTestProbe[Int]
       studentActor ! CreateStudent("Juana Fernandez", ignoredRef)
 
       //AgregarCursos a JuanaFernandez
       studentActor ! EnrollStudent(Set("Scala", "akka"), ignoredRef)
 
-      val probe = testKit.createTestProbe[StatusReply[CreatedStudent]]
+      val probe = testKit.createTestProbe[Set[String]]
+      studentActor ! GetCourses(probe.ref)
+      val courses = probe.expectMessageType[Set[String]]
+
+      courses shouldBe Set("Scala", "akka")
+
       //Cliente -> StudentRef(1234) pedile Cursos
       //Student(1234) Dar Cursos -> Cliente
-      studentActor ! GetCourses(probe.ref)
-      studentActor.ask(actorRef => GetCourses(actorRef))
+//      studentActor ! GetCourses(probe.ref)
+//      studentActor.ask(actorRef => GetCourses(actorRef))
 //
 //      new CommandHandler(dameCursos) {
 //        def dameCursos = {

@@ -42,6 +42,8 @@ case class CreatedStudent(id: String, name: String, courses: Set[String] = Set.e
           .thenReply(replyTo)(_ => StatusReply.Ack)
       case CreateStudent(_, replyTo) =>
         Effect.reply(replyTo)("Este estudiante ya existe")
+      case GetCourses(replyTo) => 
+        Effect.reply(replyTo)(courses)
 
     }
   }
@@ -58,7 +60,9 @@ case class CreateStudent(name: String, replyTo: ActorRef[String]) extends Studen
 case class GetStudent(whatever: ActorRef[StatusReply[CreatedStudent]]) extends StudentCommand
 case class EnrollStudent(courses: Set[String], replyTo: ActorRef[StatusReply[Done]]) extends StudentCommand
 case class ActivateStudent(activate: Boolean) extends StudentCommand
-case class GetCourses(courses: Set[String]) extends StudentCommand
+
+case class GetCourses(replyTo: ActorRef[Set[String]]) extends StudentCommand
+
 
 sealed trait StudentEvent
 case class StudentCreated(name: String) extends StudentEvent
